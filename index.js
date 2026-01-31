@@ -18,8 +18,8 @@ const MONGO_URI = process.env.MONGO_URI;
 
 // Conexión a MongoDB
 mongoose.connect(MONGO_URI)
-  .then(() => console.log('Conectado a MongoDB con éxito'))
-  .catch((err) => console.error('Error al conectar a MongoDB:', err));
+  .then(() => console.log(' Conectado a MongoDB con éxito'))
+  .catch((err) => console.error(' Error al conectar a MongoDB:', err));
 
 // Rutas API
 app.use('/api/auth', require('./routes/auth'));
@@ -33,5 +33,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(` Servidor corriendo en http://localhost:${PORT}`);
 });
