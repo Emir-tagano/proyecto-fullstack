@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Principal</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="glass-card header">
+            <h1>Mis Tareas</h1>
+            <button id="logout-btn" class="btn logout-btn">Cerrar Sesión</button>
+        </div>
+
+        <div class="glass-card">
+            <form id="add-task-form" class="add-task-form">
+                <input type="text" id="new-task-title" placeholder="Nueva tarea..." required>
+                <button type="submit" class="btn" style="width: auto;">Agregar</button>
+            </form>
+
+            <ul id="task-list" class="task-list">
+                <!-- Items injected by JS -->
+            </ul>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
