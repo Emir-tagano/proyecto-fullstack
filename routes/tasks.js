@@ -1,39 +1,80 @@
 const express = require('express');
 const router = express.Router();
+const { body, validationResult } = require('express-validator');
 const Task = require('../models/Task');
-const jwt = require('jsonwebtoken');
+const { verifyToken, isAdmin } = require('../middleware/authMiddleware');
 
-// Middleware to verify token
-const verifyToken = (req, res, next) => {
-    const token = req.headers['authorization'];
-    if (!token) return res.status(403).json({ message: 'No token provided' });
-
-    // Format: "Bearer <token>"
-    const bearer = token.split(' ');
-    const tokenVal = bearer[1];
-
-    jwt.verify(tokenVal, process.env.JWT_SECRET || 'secretkey', (err, decoded) => {
-        if (err) return res.status(500).json({ message: 'Failed to authenticate token' });
-        req.userId = decoded.id;
-        next();
-    });
-};
-
+// Middleware to verify token for all task routes
 router.use(verifyToken);
 
-// Get all tasks
-router.get('/', async (req, res) => {
+// Validation middleware for tasks
+const taskCreateValidation = [
+    body('title').notEmpty().withMessage('Title is required').trim().isLength({ min: 1, max: 100 }).withMessage('Title must be between 1 and 100 characters'),
+];
+
+const taskUpdateValidation = [
+    body('title').optional().notEmpty().withMessage('Title can not be empty').trim().isLength({ min: 1, max: 100 }).withMessage('Title must be between 1 and 100 characters'),
+];
+
+// Get all tasks for current user (with pagination and filtering)
+router.get('/', async (req, res, next) => {
     try {
-        const tasks = await Task.find({ user: req.userId });
-        res.json(tasks);
+        const { page = 1, limit = 10, completed } = req.query;
+        const query = { user: req.userId };
+
+        if (completed !== undefined) {
+            query.completed = completed === 'true';
+        }
+
+        const tasks = await Task.find(query)
+            .limit(limit * 1)
+            .skip((page - 1) * limit)
+            .exec();
+
+        const count = await Task.countDocuments(query);
+
+        res.json({
+            tasks,
+            totalPages: Math.ceil(count / limit),
+            currentPage: Number(page),
+            totalTasks: count
+        });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
+    }
+});
+
+// Admin Route: Get all tasks from ALL users (Demonstrating specific permissions)
+router.get('/admin/all', isAdmin, async (req, res, next) => {
+    try {
+        const { page = 1, limit = 20 } = req.query;
+        const tasks = await Task.find()
+            .populate('user', 'username')
+            .limit(limit * 1)
+            .skip((page - 1) * limit)
+            .exec();
+
+        const count = await Task.countDocuments();
+
+        res.json({
+            tasks,
+            totalPages: Math.ceil(count / limit),
+            currentPage: Number(page),
+            totalTasks: count
+        });
+    } catch (err) {
+        next(err);
     }
 });
 
 // Create task
-router.post('/', async (req, res) => {
+router.post('/', taskCreateValidation, async (req, res, next) => {
     try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
         const task = new Task({
             title: req.body.title,
             user: req.userId
@@ -41,34 +82,45 @@ router.post('/', async (req, res) => {
         await task.save();
         res.status(201).json(task);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 });
 
 // Update task
-router.put('/:id', async (req, res) => {
+router.put('/:id', taskUpdateValidation, async (req, res, next) => {
     try {
-        const { title } = req.body;
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+        }
+
+        const { title, completed } = req.body;
+        const updateData = {};
+        if (title !== undefined) updateData.title = title;
+        if (completed !== undefined) updateData.completed = completed;
+
         const task = await Task.findOneAndUpdate(
             { _id: req.params.id, user: req.userId },
-            { title },
+            updateData,
             { new: true }
         );
         if (!task) return res.status(404).json({ message: 'Task not found' });
         res.json(task);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 });
 
 // Delete task
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req, res, next) => {
     try {
-        await Task.findOneAndDelete({ _id: req.params.id, user: req.userId });
+        const task = await Task.findOneAndDelete({ _id: req.params.id, user: req.userId });
+        if (!task) return res.status(404).json({ message: 'Task not found' });
         res.json({ message: 'Task deleted' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 });
 
 module.exports = router;
+

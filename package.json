@@ -5,19 +5,27 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "dev": "node index.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon index.js",
+    "test": "mocha tests/**/*.test.js --timeout 10000 --exit",
+    "build:frontend": "cd frontend && npm install && npm run build && xcopy /e /i /y dist ..\\public"
   },
   "keywords": [],
   "author": "Emir Tagano & Diego Quintana",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "axios": "^1.13.5",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
+    "express-validator": "^7.3.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.1.5"
+  },
+  "devDependencies": {
+    "chai": "^6.2.2",
+    "mocha": "^11.7.5",
+    "supertest": "^7.2.2"
   }
 }
